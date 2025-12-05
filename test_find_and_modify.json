@@ -1,0 +1,12 @@
+{
+    "parent": "viale",
+    "filter": {
+        "component": "Light"
+    },
+    "operations": [
+        {
+            "type": "add_component",
+            "component": "AudioSource"
+        }
+    ]
+}

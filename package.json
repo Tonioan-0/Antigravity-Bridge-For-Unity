@@ -1,0 +1,24 @@
+{
+    "name": "com.antigravity.unity-bridge",
+    "version": "1.0.0",
+    "displayName": "Antigravity Unity Bridge",
+    "description": "HTTP REST API bridge that allows Antigravity AI IDE to control and manipulate Unity Editor scenes through natural language commands. Provides endpoints for scene querying, GameObject manipulation, component management, and project settings access.",
+    "unity": "2020.3",
+    "keywords": [
+        "antigravity",
+        "ai",
+        "automation",
+        "rest",
+        "api",
+        "editor",
+        "http",
+        "remote control"
+    ],
+    "author": {
+        "name": "Antonio D'Ambrosio",
+        "email": "",
+        "url": ""
+    },
+    "type": "tool",
+    "hideInEditor": false
+}
