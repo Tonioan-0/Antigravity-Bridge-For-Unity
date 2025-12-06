@@ -163,35 +163,8 @@ def modify_object_transform(name, x, y, z, rx, ry, rz):
     """
     Modify transform of an object by name.
     """
-    # Using modify command with explicit properties for position/rotation
-    # Note: The standard 'modify' command in Antigravity Bridge mostly targets components or simple properties.
-    # To modify Transform properly, we can use the 'modify' endpoint but passing propertyValues for Transform is tricky via generic API.
-    # So we simply delete and recreate the camera or find it and modify via script if we really needed smooth update.
-    # But here we can use the 'modify_component' command which we implemented/verified in tests.
-
-    # Update Position
-    send_post_request("/unity/component/modify", {
-        "objects": [name],
-        "component": "Transform",
-        "propertyValues": [
-            {"key": "position", "valueType": "vector3", "stringValue": f"{x},{y},{z}"}, # Needs vector parser on server side or specific fields
-        ]
-    })
-    # Since our server might not parse stringValue to Vector3 in generic reflection,
-    # the safest way without modifying server code is to use the specific endpoints if available,
-    # OR since this is a demo, we can just print what we would do.
-
-    # Actually, let's look at CommandExecutor.ModifyComponent. It takes propertyValues.
-    # But `ApplyPropertyValuesToComponent` uses `Convert.ChangeType`. Converting string "x,y,z" to Vector3 won't work automatically.
-
-    # Workaround: Use a custom script or just log it for this demo since we don't have a "MoveObject" specific API endpoint in v1.
     print(f"📷 Moving camera {name} to ({x}, {y}, {z})...")
-
-    # However, create_gameobject sets position. We could just delete and recreate the camera if we really wanted.
-    # But since Main Camera is special, we'll leave it be.
-
-    # NOTE: In a real scenario, we would add a specific /unity/transform/modify endpoint.
-    pass
+    set_transform(name, x=x, y=y, z=z, rx=rx, ry=ry, rz=rz)
 
 def main():
     print("🚀 Starting Procedural City Generator...")

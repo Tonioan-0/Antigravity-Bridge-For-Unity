@@ -453,6 +453,12 @@ namespace AntigravityBridge.Editor
                     return PrefabAPI.Instantiate(body);
                 }
 
+                // Transform endpoints
+                if (path == "/unity/transform/modify")
+                {
+                    return TransformAPI.ModifyTransform(body);
+                }
+
                 // Physics endpoints
                 if (path == "/unity/physics/simulate")
                 {

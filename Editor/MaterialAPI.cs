@@ -225,6 +225,41 @@ namespace AntigravityBridge.Editor
                     mat.SetColor("_EmissionColor", command.emission.ToColor());
                 }
             }
+
+            // Textures
+            ApplyTexture(mat, command.mainTexture, new[] { "_BaseMap", "_MainTex" });
+            ApplyTexture(mat, command.normalMap, new[] { "_BumpMap", "_NormalMap" }, true);
+            ApplyTexture(mat, command.maskMap, new[] { "_MetallicGlossMap", "_MaskMap", "_Metallic" });
+        }
+
+        private static void ApplyTexture(Material mat, string texturePath, string[] propertyNames, bool isNormal = false)
+        {
+            if (string.IsNullOrEmpty(texturePath)) return;
+
+            Texture tex = AssetDatabase.LoadAssetAtPath<Texture>(texturePath);
+            if (tex == null)
+            {
+                // Try extensions
+                string[] extensions = { ".png", ".jpg", ".jpeg", ".tga", ".psd" };
+                foreach (var ext in extensions)
+                {
+                    tex = AssetDatabase.LoadAssetAtPath<Texture>(texturePath + ext);
+                    if (tex != null) break;
+                }
+            }
+
+            if (tex != null)
+            {
+                foreach (var prop in propertyNames)
+                {
+                    if (mat.HasProperty(prop))
+                    {
+                        mat.SetTexture(prop, tex);
+                        if (isNormal) mat.EnableKeyword("_NORMALMAP");
+                        return; // Set on first matching property
+                    }
+                }
+            }
         }
 
         #endregion
@@ -243,6 +278,11 @@ namespace AntigravityBridge.Editor
         public float metallic = -1;     // -1 means don't change
         public float smoothness = -1;   // -1 means don't change
         public ColorData emission;
+
+        // Texture paths
+        public string mainTexture;
+        public string normalMap;
+        public string maskMap;
     }
 
     /// <summary>
