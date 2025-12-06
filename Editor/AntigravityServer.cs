@@ -333,6 +333,23 @@ namespace AntigravityBridge.Editor
             {
                 return EditorStateAPI.ClearConsoleLogs();
             }
+            // Play Mode control
+            if (path == "/unity/editor/play" && method == "POST")
+            {
+                return EditorStateAPI.EnterPlayMode();
+            }
+            if (path == "/unity/editor/stop" && method == "POST")
+            {
+                return EditorStateAPI.ExitPlayMode();
+            }
+            if (path == "/unity/editor/pause" && method == "POST")
+            {
+                return EditorStateAPI.TogglePause();
+            }
+            if (path == "/unity/editor/step" && method == "POST")
+            {
+                return EditorStateAPI.StepFrame();
+            }
 
             // Tag list (GET)
             if (path == "/unity/tag/list" && method == "GET")

@@ -407,6 +407,23 @@ def get_available_scripts():
     """Get list of available scripts"""
     return send_get_request("/unity/project/scripts")
 
+# === Play Mode Control ===
+def enter_play_mode():
+    """Enter Unity Play Mode"""
+    return send_post_request("/unity/editor/play", {})
+
+def exit_play_mode():
+    """Exit Unity Play Mode (return to Edit Mode)"""
+    return send_post_request("/unity/editor/stop", {})
+
+def toggle_pause():
+    """Pause/Resume Play Mode"""
+    return send_post_request("/unity/editor/pause", {})
+
+def step_frame():
+    """Step one frame (while paused in Play Mode)"""
+    return send_post_request("/unity/editor/step", {})
+
 # === Light Control ===
 def modify_light(object_names, color=None, intensity=None, shadows=None, range_val=None, spot_angle=None):
     """Modify light properties"""

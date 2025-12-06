@@ -428,5 +428,98 @@ namespace AntigravityBridge.Editor
         }
 
         #endregion
+
+        #region Play Mode Control
+
+        /// <summary>
+        /// Enter Play Mode
+        /// POST /unity/editor/play
+        /// </summary>
+        public static UnityResponse EnterPlayMode()
+        {
+            try
+            {
+                if (EditorApplication.isPlaying)
+                {
+                    return UnityResponse.Success("Already in Play Mode");
+                }
+
+                EditorApplication.isPlaying = true;
+                return UnityResponse.Success("Entered Play Mode");
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Failed to enter Play Mode: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Exit Play Mode
+        /// POST /unity/editor/stop
+        /// </summary>
+        public static UnityResponse ExitPlayMode()
+        {
+            try
+            {
+                if (!EditorApplication.isPlaying)
+                {
+                    return UnityResponse.Success("Already in Edit Mode");
+                }
+
+                EditorApplication.isPlaying = false;
+                return UnityResponse.Success("Exited Play Mode");
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Failed to exit Play Mode: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Pause/Unpause Play Mode
+        /// POST /unity/editor/pause
+        /// </summary>
+        public static UnityResponse TogglePause()
+        {
+            try
+            {
+                if (!EditorApplication.isPlaying)
+                {
+                    return UnityResponse.Error("Not in Play Mode - cannot pause");
+                }
+
+                EditorApplication.isPaused = !EditorApplication.isPaused;
+                string state = EditorApplication.isPaused ? "Paused" : "Resumed";
+                return UnityResponse.Success($"Play Mode {state}");
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Failed to toggle pause: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Step one frame (while paused)
+        /// POST /unity/editor/step
+        /// </summary>
+        public static UnityResponse StepFrame()
+        {
+            try
+            {
+                if (!EditorApplication.isPlaying)
+                {
+                    return UnityResponse.Error("Not in Play Mode - cannot step");
+                }
+
+                EditorApplication.Step();
+                return UnityResponse.Success("Stepped one frame");
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Failed to step frame: {e.Message}");
+            }
+        }
+
+        #endregion
     }
 }

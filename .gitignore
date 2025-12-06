@@ -1,0 +1,35 @@
+# Unity generated files
+*.meta
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+
+# IDE
+.idea/
+.vs/
+*.csproj
+*.sln
+*.swp
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+
+# Screenshots (optional - remove if you want to keep them)
+Screenshots/
+
+# Test output
+*.log
