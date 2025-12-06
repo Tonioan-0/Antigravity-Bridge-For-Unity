@@ -289,13 +289,22 @@ def send_post_request(endpoint, data):
         return None
 
 def create_primitive(primitive_type, name, x=0, y=0, z=0, scale_x=1, scale_y=1, scale_z=1, 
-                      color_r=None, color_g=None, color_b=None, add_physics=False):
+                      color_r=None, color_g=None, color_b=None, add_physics=False,
+                      parent=None, sx=None, sy=None, sz=None):
     """Create a Unity primitive GameObject with default components"""
     
     if primitive_type not in PRIMITIVES:
         print(f"✗ Unknown primitive type: {primitive_type}")
         print(f"Available primitives: {', '.join(PRIMITIVES.keys())}")
         return None
+    
+    # Support sx/sy/sz aliases
+    if sx is not None:
+        scale_x = sx
+    if sy is not None:
+        scale_y = sy
+    if sz is not None:
+        scale_z = sz
     
     template = PRIMITIVES[primitive_type]
     components = template["components"].copy()
@@ -310,6 +319,10 @@ def create_primitive(primitive_type, name, x=0, y=0, z=0, scale_x=1, scale_y=1, 
         "scale": {"x": scale_x, "y": scale_y, "z": scale_z},
         "components": components
     }
+    
+    # Add parent if specified
+    if parent:
+        data["parent"] = parent
     
     # Add color if specified
     if color_r is not None:
