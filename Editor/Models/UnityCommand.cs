@@ -15,6 +15,17 @@ namespace AntigravityBridge.Editor.Models
     }
 
     /// <summary>
+    /// v2: Unix-like command request
+    /// POST /unity/command
+    /// Body: { "cmd": "find . --component Light" }
+    /// </summary>
+    [Serializable]
+    public class CommandRequest
+    {
+        public string cmd;
+    }
+
+    /// <summary>
     /// Parameters for Unity commands
     /// </summary>
     [Serializable]
@@ -128,6 +139,47 @@ namespace AntigravityBridge.Editor.Models
     }
 
     /// <summary>
+    /// Color data for JSON serialization
+    /// Note: JsonUtility creates instances with default values, so we need IsSet() to check if it was actually provided
+    /// </summary>
+    [Serializable]
+    public class ColorData
+    {
+        public float r = -1f;  // -1 = not set (default white would be 1,1,1)
+        public float g = -1f;
+        public float b = -1f;
+        public float a = 1f;
+
+        public ColorData() { }
+
+        public ColorData(float r, float g, float b, float a = 1f)
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
+        }
+
+        /// <summary>
+        /// Check if color was actually set (not just default values)
+        /// </summary>
+        public bool IsSet()
+        {
+            return r >= 0 && g >= 0 && b >= 0;
+        }
+
+        public Color ToColor()
+        {
+            // If not set, return white as default
+            if (!IsSet())
+            {
+                return Color.white;
+            }
+            return new Color(r, g, b, a);
+        }
+    }
+
+    /// <summary>
     /// Create GameObject command
     /// </summary>
     [Serializable]
@@ -139,6 +191,7 @@ namespace AntigravityBridge.Editor.Models
         public Vector3Data rotation;
         public Vector3Data scale;
         public string[] components;
+        public ColorData color;  // Material color (optional)
     }
 
     /// <summary>
@@ -149,6 +202,33 @@ namespace AntigravityBridge.Editor.Models
     {
         public string[] objects;      // GameObject names or paths
         public string component;      // Component type name
-        public Dictionary<string, object> properties;
+        public Dictionary<string, object> properties;  // For programmatic use (not deserialized by JsonUtility)
+        public PropertyValue[] propertyValues;  // For JSON serialization
+    }
+
+    /// <summary>
+    /// Property key-value for JSON serialization (JsonUtility cannot deserialize Dictionary)
+    /// </summary>
+    [Serializable]
+    public class PropertyValue
+    {
+        public string key;
+        public string stringValue;
+        public float floatValue;
+        public int intValue;
+        public bool boolValue;
+        public string valueType;  // "string", "float", "int", "bool"
+
+        // Helper to get actual value
+        public object GetValue()
+        {
+            switch (valueType?.ToLower())
+            {
+                case "float": return floatValue;
+                case "int": return intValue;
+                case "bool": return boolValue;
+                default: return stringValue;
+            }
+        }
     }
 }

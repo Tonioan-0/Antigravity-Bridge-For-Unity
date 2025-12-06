@@ -72,6 +72,9 @@ namespace AntigravityBridge.Editor
                 // Register main-thread processor
                 EditorApplication.update += ProcessCommandQueue;
 
+                // Initialize Editor State API for console log capture
+                EditorStateAPI.Initialize();
+
                 Debug.Log($"[Antigravity] Server started on http://localhost:{port}/");
                 return true;
             }
@@ -261,15 +264,20 @@ namespace AntigravityBridge.Editor
                 return GetHealthStatus();
             }
 
-            // Scene query endpoints
+            // Scene query endpoints (v2: with QueryOptions support)
             if (path == "/unity/scene/hierarchy" && method == "GET")
             {
-                return SceneQueryAPI.GetSceneHierarchy();
+                var queryParams = ParseQueryParams(request.Url.Query);
+                var options = ParseQueryOptions(queryParams);
+                return SceneQueryAPI.GetSceneHierarchy(options);
             }
             if (path.StartsWith("/unity/scene/objects/") && method == "GET")
             {
-                string objectName = path.Substring("/unity/scene/objects/".Length);
-                return SceneQueryAPI.GetObjectInfo(objectName);
+                // URL decode to handle spaces and special characters (e.g., "Main%20Camera" -> "Main Camera")
+                string objectName = Uri.UnescapeDataString(path.Substring("/unity/scene/objects/".Length));
+                var queryParams = ParseQueryParams(request.Url.Query);
+                var options = ParseQueryOptions(queryParams);
+                return SceneQueryAPI.GetObjectInfo(objectName, options);
             }
             if (path == "/unity/scene/info" && method == "GET")
             {
@@ -282,6 +290,54 @@ namespace AntigravityBridge.Editor
             if (path == "/unity/components/list" && method == "GET")
             {
                 return SceneQueryAPI.GetAvailableComponents();
+            }
+
+            // Editor State endpoints (NEW v2)
+            if (path == "/unity/editor/state" && method == "GET")
+            {
+                return EditorStateAPI.GetEditorState();
+            }
+            if (path == "/unity/editor/console" && method == "GET")
+            {
+                // Parse query params for type filter and limit
+                var queryParams = ParseQueryParams(request.Url.Query);
+                string typeFilter = queryParams.ContainsKey("type") ? queryParams["type"] : null;
+                int limit = queryParams.ContainsKey("limit") ? int.Parse(queryParams["limit"]) : 50;
+                return EditorStateAPI.GetConsoleLogs(typeFilter, limit);
+            }
+            if (path == "/unity/editor/console/errors" && method == "GET")
+            {
+                var queryParams = ParseQueryParams(request.Url.Query);
+                int limit = queryParams.ContainsKey("limit") ? int.Parse(queryParams["limit"]) : 50;
+                return EditorStateAPI.GetConsoleErrors(limit);
+            }
+            if (path == "/unity/editor/compilation" && method == "GET")
+            {
+                return EditorStateAPI.GetCompilationStatus();
+            }
+            if (path == "/unity/editor/wait_compilation" && method == "GET")
+            {
+                var queryParams = ParseQueryParams(request.Url.Query);
+                int timeout = queryParams.ContainsKey("timeout") ? int.Parse(queryParams["timeout"]) : 30;
+                return EditorStateAPI.WaitForCompilation(timeout);
+            }
+            if (path == "/unity/editor/refresh" && method == "POST")
+            {
+                return EditorStateAPI.RefreshAssets();
+            }
+            if (path == "/unity/editor/recompile" && method == "POST")
+            {
+                return EditorStateAPI.RequestRecompilation();
+            }
+            if (path == "/unity/editor/console/clear" && method == "POST")
+            {
+                return EditorStateAPI.ClearConsoleLogs();
+            }
+
+            // Tag list (GET)
+            if (path == "/unity/tag/list" && method == "GET")
+            {
+                return TagAPI.GetAllTags();
             }
 
             // Command execution endpoints (POST)
@@ -322,6 +378,122 @@ namespace AntigravityBridge.Editor
                     return CommandExecutor.FindAndModify(body);
                 }
 
+                // Light endpoints
+                if (path == "/unity/light/modify")
+                {
+                    return LightAPI.ModifyLight(body);
+                }
+
+                // Material endpoints
+                if (path == "/unity/material/modify")
+                {
+                    return MaterialAPI.ModifyMaterial(body);
+                }
+                if (path == "/unity/material/assign")
+                {
+                    return MaterialAPI.AssignMaterial(body);
+                }
+
+                // Audio endpoints
+                if (path == "/unity/audio/play")
+                {
+                    return AudioAPI.PlayAudio(body);
+                }
+                if (path == "/unity/audio/stop")
+                {
+                    return AudioAPI.StopAudio(body);
+                }
+                if (path == "/unity/audio/modify")
+                {
+                    return AudioAPI.ModifyAudioSource(body);
+                }
+
+                // Tag endpoints
+                if (path == "/unity/tag/create")
+                {
+                    return TagAPI.CreateTag(body);
+                }
+                if (path == "/unity/tag/assign")
+                {
+                    return TagAPI.AssignTag(body);
+                }
+
+                // Layer endpoints
+                if (path == "/unity/layer/assign")
+                {
+                    return TagAPI.AssignLayer(body);
+                }
+
+                // Script endpoints
+                if (path == "/unity/script/create")
+                {
+                    return ScriptAPI.CreateScript(body);
+                }
+
+                // Physics endpoints
+                if (path == "/unity/physics/simulate")
+                {
+                    return PhysicsAPI.Simulate(body);
+                }
+                if (path == "/unity/physics/step")
+                {
+                    return PhysicsAPI.Step(body);
+                }
+                if (path == "/unity/physics/raycast")
+                {
+                    return PhysicsAPI.Raycast(body);
+                }
+                if (path == "/unity/physics/gravity")
+                {
+                    return PhysicsAPI.SetGravity(body);
+                }
+
+                // Animation endpoints
+                if (path == "/unity/animation/play")
+                {
+                    return AnimationAPI.PlayAnimation(body);
+                }
+                if (path == "/unity/animation/stop")
+                {
+                    return AnimationAPI.StopAnimation(body);
+                }
+                if (path == "/unity/animator/set")
+                {
+                    return AnimationAPI.SetAnimatorParameter(body);
+                }
+
+                // Particle endpoints
+                if (path == "/unity/particles/play")
+                {
+                    return ParticleAPI.PlayParticles(body);
+                }
+                if (path == "/unity/particles/stop")
+                {
+                    return ParticleAPI.StopParticles(body);
+                }
+                if (path == "/unity/particles/emit")
+                {
+                    return ParticleAPI.EmitParticles(body);
+                }
+                if (path == "/unity/particles/modify")
+                {
+                    return ParticleAPI.ModifyParticles(body);
+                }
+
+                // Screenshot endpoints
+                if (path == "/unity/screenshot/capture")
+                {
+                    return ScreenshotAPI.CaptureScreenshot(body);
+                }
+                if (path == "/unity/screenshot/camera")
+                {
+                    return ScreenshotAPI.CaptureFromCamera(body);
+                }
+                if (path == "/unity/screenshot/scene")
+                {
+                    return ScreenshotAPI.CaptureSceneView(body);
+                }
+
                 // Settings endpoints
                 if (path.StartsWith("/unity/settings/"))
                 {
@@ -335,6 +507,25 @@ namespace AntigravityBridge.Editor
             {
                 string category = path.Substring("/unity/settings/".Length);
                 return SettingsAPI.GetSettings(category);
+            }
+
+            // v2: Unified command endpoint (Unix-like commands)
+            if (path == "/unity/command" && method == "POST")
+            {
+                string body = ReadRequestBody(request);
+                try
+                {
+                    var cmdObj = JsonUtility.FromJson<CommandRequest>(body);
+                    if (cmdObj != null && !string.IsNullOrEmpty(cmdObj.cmd))
+                    {
+                        return CommandParser.ParseAndExecute(cmdObj.cmd);
+                    }
+                    return UnityResponse.Error("Missing 'cmd' field in request body");
+                }
+                catch (Exception e)
+                {
+                    return UnityResponse.Error($"Failed to parse command: {e.Message}");
+                }
             }
 
             return UnityResponse.Error($"Unknown endpoint: {method} {path}");
@@ -354,6 +545,61 @@ namespace AntigravityBridge.Editor
             {
                 return reader.ReadToEnd();
             }
+        }
+
+        /// <summary>
+        /// Parse URL query parameters into dictionary
+        /// </summary>
+        private static Dictionary<string, string> ParseQueryParams(string query)
+        {
+            var result = new Dictionary<string, string>();
+            if (string.IsNullOrEmpty(query) || query == "?")
+                return result;
+
+            // Remove leading ?
+            if (query.StartsWith("?"))
+                query = query.Substring(1);
+
+            foreach (var param in query.Split('&'))
+            {
+                var parts = param.Split('=');
+                if (parts.Length == 2)
+                {
+                    result[parts[0]] = System.Net.WebUtility.UrlDecode(parts[1]);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Parse QueryOptions from URL query parameters
+        /// </summary>
+        private static QueryOptions ParseQueryOptions(Dictionary<string, string> queryParams)
+        {
+            var options = new QueryOptions();
+            
+            if (queryParams.ContainsKey("select"))
+            {
+                options.select = queryParams["select"].Split(',');
+            }
+            if (queryParams.ContainsKey("depth"))
+            {
+                int.TryParse(queryParams["depth"], out options.depth);
+            }
+            if (queryParams.ContainsKey("format"))
+            {
+                options.format = queryParams["format"];
+            }
+            if (queryParams.ContainsKey("limit"))
+            {
+                int.TryParse(queryParams["limit"], out options.limit);
+            }
+            if (queryParams.ContainsKey("precision"))
+            {
+                int.TryParse(queryParams["precision"], out options.precision);
+            }
+            
+            return options;
         }
 
         /// <summary>

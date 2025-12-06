@@ -5,6 +5,87 @@ All notable changes to the Antigravity Unity Bridge package will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2024-12-05
+
+### Added
+
+#### Editor State API (AI Awareness)
+- GET /unity/editor/state - Editor state (playing, paused, compiling, has_errors)
+- GET /unity/editor/console - Console logs with filtering (?type=error&limit=50)
+- GET /unity/editor/console/errors - Quick access to errors only
+- GET /unity/editor/compilation - Compilation status
+- GET /unity/editor/wait_compilation - Block until compilation finishes (?timeout=30)
+
+#### Output Optimization
+- Query parameter `?format=names_only` for minimal output (just object names)
+- Query parameter `?format=exists_only` for existence checks
+- Query parameter `?depth=N` for hierarchy depth control (0=root only)
+- Query parameter `?select=field1,field2` for field selection
+- Query parameter `?precision=N` for transform rounding (default: 3 decimals)
+
+#### Models
+- EditorStateModels.cs - Data structures for editor state, console logs, compilation
+- QueryOptions - Model for query parameters (select, depth, format, precision)
+
+#### Unix-like Command Architecture
+- POST /unity/command - Unified endpoint accepting command strings
+- QueryBuilder - Fluent API for building find queries
+- CommandBuilder - Fluent API for create/modify/delete operations
+- CommandParser - Parses Unix-like command strings
+
+**Command Examples:**
+```bash
+find . --component Light --format names_only
+create MyCube --position 0,1,0 --components BoxCollider,Rigidbody
+modify Player --add AudioSource --set active=false
+delete TempObject --force
+get MainCamera --select components
+```
+
+#### Game Element Control API
+- POST /unity/light/modify - Modify light color, intensity, shadows, range
+- POST /unity/material/modify - Modify URP material properties (color, metallic, smoothness, emission)
+- POST /unity/material/assign - Assign existing material from Assets
+- POST /unity/audio/play - Play audio clip on object
+- POST /unity/audio/stop - Stop audio playback
+- POST /unity/audio/modify - Modify AudioSource properties
+- POST /unity/tag/create - Create new tag
+- POST /unity/tag/assign - Assign tag to objects
+- GET /unity/tag/list - Get all available tags
+- POST /unity/layer/assign - Assign layer to objects
+- POST /unity/script/create - Create C# MonoBehaviour script
+
+**Python Client Commands:**
+```bash
+# Light control
+python unity_bridge.py light "Spot Light" --color red --intensity 3
+
+# Material control
+python unity_bridge.py material "Cube" --color blue --metallic 0.8
+
+# Audio control  
+python unity_bridge.py audio play "Player" --clip "Assets/Audio/jump.wav"
+
+# Tag management
+python unity_bridge.py tag create --name Enemy
+python unity_bridge.py tag assign --name Enemy --objects Cube Sphere
+
+# Script creation
+python unity_bridge.py script EnemyAI --path Assets/Scripts --methods Start Update
+```
+
+### Changed
+- Position/rotation/scale now rounded to 3 decimal places by default
+- SceneQueryAPI methods now accept QueryOptions for output control
+- AntigravityServer routes parse query parameters for v2 features
+
+### Technical Details
+- Console log capture via Application.logMessageReceived
+- Thread-safe log storage with 100 entry limit
+- Backward compatible - existing endpoints work without changes
+
+---
+
 ## [1.0.0] - 2024-01-15
 
 ### Added

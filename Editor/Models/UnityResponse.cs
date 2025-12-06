@@ -70,6 +70,12 @@ namespace AntigravityBridge.Editor.Models
         public SceneInfoData scene_info;
         public Dictionary<string, object> settings;
         public ServerStatusData server_status;
+        
+        // v2: Editor State API fields
+        public EditorStateData editor_state;
+        public ConsoleLogsData console_logs;
+        public CompilationData compilation;
+        public WaitCompilationResult wait_result;
     }
 
     /// <summary>
@@ -127,7 +133,28 @@ namespace AntigravityBridge.Editor.Models
     {
         public string type;
         public string name;
-        public Dictionary<string, object> properties;
+        public Dictionary<string, object> properties;  // For internal use
+        public ComponentProperty[] serialized_properties;  // For JSON serialization
+    }
+
+    /// <summary>
+    /// Single property key-value pair for JSON serialization
+    /// </summary>
+    [Serializable]
+    public class ComponentProperty
+    {
+        public string key;
+        public string value;
+        public string valueType;
+
+        public ComponentProperty() { }
+
+        public ComponentProperty(string key, object value)
+        {
+            this.key = key;
+            this.value = value?.ToString() ?? "null";
+            this.valueType = value?.GetType().Name ?? "null";
+        }
     }
 
     /// <summary>

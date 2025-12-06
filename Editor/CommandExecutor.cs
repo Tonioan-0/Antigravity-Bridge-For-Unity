@@ -99,7 +99,7 @@ namespace AntigravityBridge.Editor
                 // CRITICAL FIX: Setup mesh and material (always, not just when components exist)
                 try
                 {
-                    SetupPrimitiveMeshAndMaterial(newObj);
+                    SetupPrimitiveMeshAndMaterial(newObj, command.color);
                 }
                 catch (Exception ex)
                 {
@@ -406,7 +406,13 @@ namespace AntigravityBridge.Editor
 
                         Undo.RecordObject(component, "Modify Component");
 
-                        if (command.properties != null)
+                        // Use propertyValues array (JsonUtility compatible)
+                        if (command.propertyValues != null && command.propertyValues.Length > 0)
+                        {
+                            ApplyPropertyValuesToComponent(component, command.propertyValues);
+                        }
+                        // Fallback to dictionary (for programmatic use)
+                        else if (command.properties != null)
                         {
                             ApplyPropertiesToComponent(component, command.properties);
                         }
@@ -789,10 +795,54 @@ namespace AntigravityBridge.Editor
         }
 
         /// <summary>
+        /// Apply property values from PropertyValue array (JSON serialization compatible)
+        /// </summary>
+        private static void ApplyPropertyValuesToComponent(Component component, PropertyValue[] propertyValues)
+        {
+            var type = component.GetType();
+            
+            foreach (var pv in propertyValues)
+            {
+                if (string.IsNullOrEmpty(pv.key)) continue;
+                
+                try
+                {
+                    object value = pv.GetValue();
+                    
+                    // Try property first
+                    var property = type.GetProperty(pv.key);
+                    if (property != null && property.CanWrite)
+                    {
+                        var convertedValue = Convert.ChangeType(value, property.PropertyType);
+                        property.SetValue(component, convertedValue);
+                        Debug.Log($"[AntigravityBridge] Set property '{pv.key}' = {convertedValue}");
+                        continue;
+                    }
+                    
+                    // Try field
+                    var field = type.GetField(pv.key);
+                    if (field != null)
+                    {
+                        var convertedValue = Convert.ChangeType(value, field.FieldType);
+                        field.SetValue(component, convertedValue);
+                        Debug.Log($"[AntigravityBridge] Set field '{pv.key}' = {convertedValue}");
+                        continue;
+                    }
+                    
+                    Debug.LogWarning($"[AntigravityBridge] Property/field '{pv.key}' not found on {type.Name}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Failed to set property '{pv.key}' on {type.Name}: {e.Message}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Setup mesh and material for primitive GameObjects
         /// Called after components are added to assign default meshes and materials
         /// </summary>
-        private static void SetupPrimitiveMeshAndMaterial(GameObject obj)
+        private static void SetupPrimitiveMeshAndMaterial(GameObject obj, ColorData color = null)
         {
             Debug.Log($"[AntigravityBridge] SetupPrimitiveMeshAndMaterial called for: '{obj.name}'");
             
@@ -849,11 +899,28 @@ namespace AntigravityBridge.Editor
             // Setup default material if MeshRenderer exists but has no material
             if (meshRenderer != null && (meshRenderer.sharedMaterial == null || meshRenderer.sharedMaterials.Length == 0))
             {
-                // Use Unity's default material
-                Material defaultMaterial = new Material(Shader.Find("Standard"));
+                // Use URP Lit material with optional color
+                Material defaultMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 defaultMaterial.name = "Default Material";
+                
+                // Apply color if specified (URP uses _BaseColor instead of _Color)
+                if (color != null)
+                {
+                    defaultMaterial.SetColor("_BaseColor", color.ToColor());
+                    Debug.Log($"Applied color ({color.r}, {color.g}, {color.b}) to {obj.name}");
+                }
+                
                 meshRenderer.sharedMaterial = defaultMaterial;
-                Debug.Log($"Assigned default material to {obj.name}");
+                Debug.Log($"Assigned default URP material to {obj.name}");
+            }
+            // If material already exists but color is specified, update color
+            else if (meshRenderer != null && color != null)
+            {
+                // Create a new material instance to avoid modifying shared materials
+                Material newMaterial = new Material(meshRenderer.sharedMaterial);
+                newMaterial.SetColor("_BaseColor", color.ToColor());
+                meshRenderer.sharedMaterial = newMaterial;
+                Debug.Log($"Updated material color to ({color.r}, {color.g}, {color.b}) on {obj.name}");
             }
         }
         
