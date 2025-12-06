@@ -447,6 +447,12 @@ namespace AntigravityBridge.Editor
                     return ScriptAPI.CreateScript(body);
                 }
 
+                // Prefab endpoints
+                if (path == "/unity/prefab/instantiate")
+                {
+                    return PrefabAPI.Instantiate(body);
+                }
+
                 // Physics endpoints
                 if (path == "/unity/physics/simulate")
                 {

@@ -529,6 +529,23 @@ def create_script(name, path=None, methods=None):
         data["methods"] = methods
     return send_post_request("/unity/script/create", data)
 
+# === Prefab Control ===
+def instantiate_prefab(path, name=None, parent=None, x=0, y=0, z=0, rx=0, ry=0, rz=0, sx=1, sy=1, sz=1):
+    """Instantiate a Prefab from Assets"""
+    data = {
+        "prefabPath": path,
+        "position": {"x": x, "y": y, "z": z},
+        "rotation": {"x": rx, "y": ry, "z": rz},
+        "scale": {"x": sx, "y": sy, "z": sz}
+    }
+
+    if name:
+        data["name"] = name
+    if parent:
+        data["parent"] = parent
+
+    return send_post_request("/unity/prefab/instantiate", data)
+
 # === Physics Control ===
 def physics_simulate(seconds=1.0, step_size=None):
     """Simulate physics for specified duration"""
@@ -808,6 +825,15 @@ Examples:
     script_parser.add_argument("--path", help="Folder path (Assets/Scripts)")
     script_parser.add_argument("--methods", nargs="+", help="Methods: Start Update FixedUpdate etc.")
     
+    # Prefab command
+    prefab_parser = subparsers.add_parser("prefab", help="Instantiate prefab")
+    prefab_parser.add_argument("path", help="Prefab path (e.g. Assets/Prefabs/MyObject.prefab)")
+    prefab_parser.add_argument("--name", help="Name of instantiated object")
+    prefab_parser.add_argument("--parent", help="Parent object name")
+    prefab_parser.add_argument("--x", type=float, default=0, help="X position")
+    prefab_parser.add_argument("--y", type=float, default=0, help="Y position")
+    prefab_parser.add_argument("--z", type=float, default=0, help="Z position")
+
     # Query commands
     subparsers.add_parser("status", help="Get server status")
     subparsers.add_parser("scene", help="Get scene info")
@@ -880,6 +906,8 @@ Examples:
         assign_layer(args.objects, layer)
     elif args.command == "script":
         create_script(args.name, path=args.path, methods=args.methods)
+    elif args.command == "prefab":
+        instantiate_prefab(args.path, name=args.name, parent=args.parent, x=args.x, y=args.y, z=args.z)
     elif args.command == "status":
         get_status()
     elif args.command == "scene":
