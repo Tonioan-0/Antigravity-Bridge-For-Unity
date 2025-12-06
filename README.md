@@ -186,6 +186,12 @@ curl -X POST http://localhost:8080/unity/scene/create \
 - `POST /unity/component/remove` - Remove component
 - `POST /unity/component/modify` - Modify component properties
 
+### Prefabs & Instantiation
+- `POST /unity/prefab/instantiate` - Instantiate a prefab from Assets
+
+### Transform Manipulation
+- `POST /unity/transform/modify` - Move, rotate, or scale existing objects (World/Local)
+
 ### Settings
 - `GET /unity/settings/{category}` - Read settings
 - `POST /unity/settings/{category}` - Modify settings

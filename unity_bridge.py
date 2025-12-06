@@ -443,7 +443,8 @@ def modify_light(object_names, color=None, intensity=None, shadows=None, range_v
     return send_post_request("/unity/light/modify", data)
 
 # === Material Control ===
-def modify_material(object_names, color=None, metallic=None, smoothness=None, emission=None):
+def modify_material(object_names, color=None, metallic=None, smoothness=None, emission=None,
+                   texture=None, normal=None, mask=None):
     """Modify material properties"""
     data = {"objects": object_names if isinstance(object_names, list) else [object_names]}
     if color:
@@ -458,6 +459,15 @@ def modify_material(object_names, color=None, metallic=None, smoothness=None, em
         e = parse_color(emission)
         if e:
             data["emission"] = {"r": e[0], "g": e[1], "b": e[2], "a": 1}
+
+    # Textures
+    if texture:
+        data["mainTexture"] = texture
+    if normal:
+        data["normalMap"] = normal
+    if mask:
+        data["maskMap"] = mask
+
     return send_post_request("/unity/material/modify", data)
 
 def assign_material(object_names, material_path):
@@ -528,6 +538,57 @@ def create_script(name, path=None, methods=None):
     if methods:
         data["methods"] = methods
     return send_post_request("/unity/script/create", data)
+
+# === Prefab Control ===
+def instantiate_prefab(path, name=None, parent=None, x=0, y=0, z=0, rx=0, ry=0, rz=0, sx=1, sy=1, sz=1):
+    """Instantiate a Prefab from Assets"""
+    data = {
+        "prefabPath": path,
+        "position": {"x": x, "y": y, "z": z},
+        "rotation": {"x": rx, "y": ry, "z": rz},
+        "scale": {"x": sx, "y": sy, "z": sz}
+    }
+
+    if name:
+        data["name"] = name
+    if parent:
+        data["parent"] = parent
+
+    return send_post_request("/unity/prefab/instantiate", data)
+
+# === Transform Control ===
+def set_transform(objects, x=None, y=None, z=None, rx=None, ry=None, rz=None, sx=None, sy=None, sz=None, local=False):
+    """Modify transform of existing objects"""
+    data = {
+        "objects": objects if isinstance(objects, list) else [objects],
+        "useLocalSpace": local
+    }
+
+    if x is not None or y is not None or z is not None:
+        data["position"] = {"x": x or 0, "y": y or 0, "z": z or 0}
+        data["positionMask"] = {
+            "x": 1 if x is not None else 0,
+            "y": 1 if y is not None else 0,
+            "z": 1 if z is not None else 0
+        }
+
+    if rx is not None or ry is not None or rz is not None:
+        data["rotation"] = {"x": rx or 0, "y": ry or 0, "z": rz or 0}
+        data["rotationMask"] = {
+            "x": 1 if rx is not None else 0,
+            "y": 1 if ry is not None else 0,
+            "z": 1 if rz is not None else 0
+        }
+
+    if sx is not None or sy is not None or sz is not None:
+        data["scale"] = {"x": sx if sx is not None else 1, "y": sy if sy is not None else 1, "z": sz if sz is not None else 1}
+        data["scaleMask"] = {
+            "x": 1 if sx is not None else 0,
+            "y": 1 if sy is not None else 0,
+            "z": 1 if sz is not None else 0
+        }
+
+    return send_post_request("/unity/transform/modify", data)
 
 # === Physics Control ===
 def physics_simulate(seconds=1.0, step_size=None):
@@ -779,6 +840,9 @@ Examples:
     mat_parser.add_argument("--metallic", type=float, help="Metallic value (0-1)")
     mat_parser.add_argument("--smoothness", type=float, help="Smoothness value (0-1)")
     mat_parser.add_argument("--emission", help="Emission color")
+    mat_parser.add_argument("--texture", help="Main texture path")
+    mat_parser.add_argument("--normal", help="Normal map path")
+    mat_parser.add_argument("--mask", help="Mask map path")
     mat_parser.add_argument("--assign", help="Assign material from path (Assets/...)")
     
     # Audio command
@@ -808,6 +872,41 @@ Examples:
     script_parser.add_argument("--path", help="Folder path (Assets/Scripts)")
     script_parser.add_argument("--methods", nargs="+", help="Methods: Start Update FixedUpdate etc.")
     
+    # Prefab command
+    prefab_parser = subparsers.add_parser("prefab", help="Instantiate prefab")
+    prefab_parser.add_argument("path", help="Prefab path (e.g. Assets/Prefabs/MyObject.prefab)")
+    prefab_parser.add_argument("--name", help="Name of instantiated object")
+    prefab_parser.add_argument("--parent", help="Parent object name")
+    prefab_parser.add_argument("--x", type=float, default=0, help="X position")
+    prefab_parser.add_argument("--y", type=float, default=0, help="Y position")
+    prefab_parser.add_argument("--z", type=float, default=0, help="Z position")
+
+    # Animation command
+    anim_parser = subparsers.add_parser("animation", help="Control animation")
+    anim_parser.add_argument("action", choices=["play", "stop", "set"], help="Animation action")
+    anim_parser.add_argument("objects", nargs="+", help="Object names")
+    anim_parser.add_argument("--clip", help="Clip name (Legacy Animation)")
+    anim_parser.add_argument("--state", help="State name (Animator)")
+    anim_parser.add_argument("--trigger", help="Trigger name (Animator)")
+    anim_parser.add_argument("--param", help="Parameter name")
+    anim_parser.add_argument("--type", choices=["float", "int", "bool", "trigger"], help="Parameter type")
+    anim_parser.add_argument("--value", help="Parameter value")
+    anim_parser.add_argument("--pause", action="store_true", help="Pause instead of stop")
+
+    # Transform command
+    transform_parser = subparsers.add_parser("transform", help="Modify transform")
+    transform_parser.add_argument("objects", nargs="+", help="Object names")
+    transform_parser.add_argument("--x", type=float, help="X position")
+    transform_parser.add_argument("--y", type=float, help="Y position")
+    transform_parser.add_argument("--z", type=float, help="Z position")
+    transform_parser.add_argument("--rx", type=float, help="X rotation")
+    transform_parser.add_argument("--ry", type=float, help="Y rotation")
+    transform_parser.add_argument("--rz", type=float, help="Z rotation")
+    transform_parser.add_argument("--sx", type=float, help="X scale")
+    transform_parser.add_argument("--sy", type=float, help="Y scale")
+    transform_parser.add_argument("--sz", type=float, help="Z scale")
+    transform_parser.add_argument("--local", action="store_true", help="Use local space")
+
     # Query commands
     subparsers.add_parser("status", help="Get server status")
     subparsers.add_parser("scene", help="Get scene info")
@@ -854,7 +953,8 @@ Examples:
             assign_material(args.objects, args.assign)
         else:
             modify_material(args.objects, color=args.color, metallic=args.metallic, 
-                          smoothness=args.smoothness, emission=args.emission)
+                          smoothness=args.smoothness, emission=args.emission,
+                          texture=args.texture, normal=args.normal, mask=args.mask)
     elif args.command == "audio":
         if args.action == "play":
             play_audio(args.object, clip_path=args.clip, volume=args.volume or 1.0, 
@@ -880,6 +980,45 @@ Examples:
         assign_layer(args.objects, layer)
     elif args.command == "script":
         create_script(args.name, path=args.path, methods=args.methods)
+    elif args.command == "prefab":
+        instantiate_prefab(args.path, name=args.name, parent=args.parent, x=args.x, y=args.y, z=args.z)
+    elif args.command == "animation":
+        if args.action == "play":
+            play_animation(args.objects, clip_name=args.clip, state_name=args.state, trigger=args.trigger)
+        elif args.action == "stop":
+            stop_animation(args.objects, pause=args.pause)
+        elif args.action == "set":
+            # Parse value
+            val = args.value
+            type_arg = args.type
+
+            if type_arg == "bool":
+                val = (str(val).lower() == "true" or str(val) == "1")
+            elif type_arg == "int":
+                val = int(val)
+            elif type_arg == "float":
+                val = float(val)
+            elif type_arg == "trigger":
+                val = "trigger"
+            elif type_arg is None:
+                # Auto-detect from string
+                if val.lower() == "true" or val.lower() == "false":
+                    val = (val.lower() == "true")
+                    type_arg = "bool"
+                elif val.isdigit():
+                    val = int(val)
+                    type_arg = "int"
+                else:
+                    try:
+                        val = float(val)
+                        type_arg = "float"
+                    except ValueError:
+                        pass # Treat as string/trigger or fail?
+                        # If unknown, let set_animator_param handle it (it expects int/float/bool/trigger)
+
+            set_animator_param(args.objects, args.param, val, type_arg)
+    elif args.command == "transform":
+        set_transform(args.objects, args.x, args.y, args.z, args.rx, args.ry, args.rz, args.sx, args.sy, args.sz, args.local)
     elif args.command == "status":
         get_status()
     elif args.command == "scene":

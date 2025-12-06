@@ -152,6 +152,45 @@ python unity_bridge.py scripts
 # 4. Then perform operations based on what you found
 ```
 
+## 🏗️ Prefabs & Transforms
+
+### Instantiate Prefab
+Use prefabs for complex objects.
+```python
+# Instantiate from Assets
+python unity_bridge.py prefab "Assets/Prefabs/MyCharacter.prefab" --name "Hero" --x 0 --y 1 --z 0
+```
+
+### Move/Rotate Existing Objects
+To move the camera or adjust placement after creation:
+```python
+# Move Camera
+python unity_bridge.py transform "Main Camera" --y 10 --z -20 --rx 30
+
+# Local rotation (e.g. door hinge)
+python unity_bridge.py transform "Door" --ry 90 --local
+```
+
+### Material Textures
+You can assign textures (diffuse, normal, mask) to materials:
+```python
+# Apply textures to an object
+python unity_bridge.py material "Wall" \
+  --texture "Assets/Textures/Brick_Base.png" \
+  --normal "Assets/Textures/Brick_Normal.png"
+```
+
+### Animation
+Control `Animator` or `Animation` components:
+```python
+# Play a specific state in Animator
+python unity_bridge.py animation play "Player" --state "Run"
+
+# Set a parameter (e.g., speed, jump)
+python unity_bridge.py animation set "Player" --param "Speed" --type float --value 5.0
+python unity_bridge.py animation set "Player" --param "IsJumping" --type bool --value true
+```
+
 ## 🎨 Naming Conventions
 
 Follow Unity naming conventions:

@@ -231,4 +231,18 @@ namespace AntigravityBridge.Editor.Models
             }
         }
     }
+
+    /// <summary>
+    /// Instantiate Prefab command
+    /// </summary>
+    [Serializable]
+    public class InstantiatePrefabCommand
+    {
+        public string prefabPath; // Path relative to project (e.g. "Assets/Prefabs/Player.prefab")
+        public Vector3Data position;
+        public Vector3Data rotation;
+        public Vector3Data scale;
+        public string parent;
+        public string name; // Optional name override
+    }
 }
