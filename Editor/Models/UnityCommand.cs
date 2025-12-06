@@ -101,9 +101,12 @@ namespace AntigravityBridge.Editor.Models
     [Serializable]
     public class Vector3Data
     {
-        public float x;
-        public float y;
-        public float z;
+        // Use -999999 as "unset" sentinel value - if all are this, scale wasn't provided
+        private const float UNSET_VALUE = -999999f;
+        
+        public float x = UNSET_VALUE;
+        public float y = UNSET_VALUE;
+        public float z = UNSET_VALUE;
 
         public Vector3Data() { }
 
@@ -124,6 +127,27 @@ namespace AntigravityBridge.Editor.Models
         public Vector3 ToVector3()
         {
             return new Vector3(x, y, z);
+        }
+        
+        /// <summary>
+        /// Check if this Vector3Data was explicitly set in JSON
+        /// Returns true if any component was set to a real value
+        /// </summary>
+        public bool IsSet()
+        {
+            return x != UNSET_VALUE || y != UNSET_VALUE || z != UNSET_VALUE;
+        }
+        
+        /// <summary>
+        /// Returns Vector3 with unset values replaced by defaults
+        /// </summary>
+        public Vector3 ToVector3WithDefaults(float defaultValue = 0f)
+        {
+            return new Vector3(
+                x == UNSET_VALUE ? defaultValue : x,
+                y == UNSET_VALUE ? defaultValue : y,
+                z == UNSET_VALUE ? defaultValue : z
+            );
         }
     }
 

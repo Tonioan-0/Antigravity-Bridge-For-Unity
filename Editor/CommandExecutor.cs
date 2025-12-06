@@ -66,20 +66,21 @@ namespace AntigravityBridge.Editor
                     }
                 }
 
-                // Set transform
-                if (command.position != null)
+                // Set transform - use IsSet() to detect if values were explicitly provided
+                if (command.position != null && command.position.IsSet())
                 {
-                    newObj.transform.position = command.position.ToVector3();
+                    newObj.transform.position = command.position.ToVector3WithDefaults(0f);
                 }
-                if (command.rotation != null)
+                if (command.rotation != null && command.rotation.IsSet())
                 {
-                    newObj.transform.eulerAngles = command.rotation.ToVector3();
+                    newObj.transform.eulerAngles = command.rotation.ToVector3WithDefaults(0f);
                 }
                 
                 // CRITICAL FIX: Set scale to (1,1,1) if not specified
-                if (command.scale != null)
+                if (command.scale != null && command.scale.IsSet())
                 {
-                    newObj.transform.localScale = command.scale.ToVector3();
+                    // Use 1 as default for scale components not specified
+                    newObj.transform.localScale = command.scale.ToVector3WithDefaults(1f);
                 }
                 else
                 {
