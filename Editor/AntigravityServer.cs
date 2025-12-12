@@ -228,8 +228,18 @@ namespace AntigravityBridge.Editor
 
                 AddLogEntry(logEntry);
 
-                // Serialize response
-                responseString = JsonUtility.ToJson(unityResponse);
+                // Serialize response - handle depth limit errors gracefully
+                try
+                {
+                    responseString = JsonUtility.ToJson(unityResponse);
+                }
+                catch (ArgumentException serializationEx) when (serializationEx.Message.Contains("depth limit"))
+                {
+                    // Unity's JsonUtility has a serialization depth limit of 10
+                    Debug.LogWarning($"[Antigravity] Scene hierarchy too deep for JSON serialization. Use ?format=names_only or reduce ?depth parameter.");
+                    unityResponse = UnityResponse.Error("Serialization depth limit exceeded. Use ?format=names_only for deep hierarchies, or specify a lower ?depth value.");
+                    responseString = JsonUtility.ToJson(unityResponse);
+                }
                 response.StatusCode = 200;
             }
             catch (Exception e)

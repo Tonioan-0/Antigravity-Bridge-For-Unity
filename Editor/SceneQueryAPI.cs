@@ -51,8 +51,9 @@ namespace AntigravityBridge.Editor
                 var rootObjects = scene.GetRootGameObjects();
 
                 // Limit depth to prevent JsonUtility serialization overflow (max 10 levels)
-                // Use 5 as default to stay safely under limit (JSON structure adds extra levels)
-                int maxDepth = options.depth <= 0 ? 5 : Math.Min(options.depth, 5);
+                // Use 3 as default to stay safely under limit (JSON structure adds extra levels)
+                // Note: GameObjectNode nested structure counts toward the limit
+                int maxDepth = options.depth <= 0 ? 3 : Math.Min(options.depth, 3);
 
                 // Apply format option - names_only returns Unity-style hierarchy
                 if (options.format == "names_only")
