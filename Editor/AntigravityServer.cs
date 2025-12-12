@@ -533,6 +533,16 @@ namespace AntigravityBridge.Editor
                     return ScreenshotAPI.CaptureSceneView(body);
                 }
 
+                // UI endpoints
+                if (path == "/unity/ui/create")
+                {
+                    return UIAPI.CreateUIElement(body);
+                }
+                if (path == "/unity/ui/rect")
+                {
+                    return UIAPI.ModifyRectTransform(body);
+                }
+
                 // Settings endpoints
                 if (path.StartsWith("/unity/settings/"))
                 {
