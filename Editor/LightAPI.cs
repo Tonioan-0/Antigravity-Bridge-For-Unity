@@ -88,7 +88,7 @@ namespace AntigravityBridge.Editor
         {
             try
             {
-                var lights = UnityEngine.Object.FindObjectsOfType<Light>();
+                var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
                 var lightInfos = new List<LightInfo>();
 
                 foreach (var light in lights)

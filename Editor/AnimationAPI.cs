@@ -292,6 +292,465 @@ namespace AntigravityBridge.Editor
                 return UnityResponse.Error($"Get animator info failed: {e.Message}");
             }
         }
+        
+        /// <summary>
+        /// Get all Animator parameters (READ)
+        /// GET /unity/animator/parameters/{objectName}
+        /// </summary>
+        public static UnityResponse GetAnimatorParameters(string objectName)
+        {
+            try
+            {
+                var obj = GameObject.Find(objectName);
+                if (obj == null)
+                {
+                    return UnityResponse.Error($"Object '{objectName}' not found");
+                }
+                
+                var animator = obj.GetComponent<Animator>();
+                if (animator == null)
+                {
+                    return UnityResponse.Error($"'{objectName}' has no Animator component");
+                }
+                
+                if (animator.runtimeAnimatorController == null)
+                {
+                    return UnityResponse.Error($"'{objectName}' Animator has no controller assigned");
+                }
+                
+                var parameters = new List<AnimatorParameterInfo>();
+                foreach (var param in animator.parameters)
+                {
+                    var info = new AnimatorParameterInfo
+                    {
+                        name = param.name,
+                        type = param.type.ToString()
+                    };
+                    
+                    // Get current value based on type
+                    switch (param.type)
+                    {
+                        case AnimatorControllerParameterType.Float:
+                            info.floatValue = animator.GetFloat(param.name);
+                            break;
+                        case AnimatorControllerParameterType.Int:
+                            info.intValue = animator.GetInteger(param.name);
+                            break;
+                        case AnimatorControllerParameterType.Bool:
+                            info.boolValue = animator.GetBool(param.name);
+                            break;
+                        case AnimatorControllerParameterType.Trigger:
+                            // Triggers don't have a readable value
+                            break;
+                    }
+                    
+                    parameters.Add(info);
+                }
+                
+                return UnityResponse.Success($"Found {parameters.Count} parameters on '{objectName}'", new ResponseData
+                {
+                    affected_objects = new[] { objectName },
+                    count = parameters.Count,
+                    animator_parameters = parameters.ToArray()
+                });
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Get animator parameters failed: {e.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Add parameter to AnimatorController (CREATE)
+        /// POST /unity/animator/parameter/add
+        /// </summary>
+        public static UnityResponse AddAnimatorParameter(string json)
+        {
+            try
+            {
+                var command = JsonUtility.FromJson<AnimatorParameterCommand>(json);
+                
+                if (command.objects == null || command.objects.Length == 0)
+                {
+                    return UnityResponse.Error("No objects specified");
+                }
+                
+                if (string.IsNullOrEmpty(command.parameterName))
+                {
+                    return UnityResponse.Error("Parameter name not specified");
+                }
+                
+                var modifiedObjects = new List<string>();
+                var errors = new List<string>();
+                
+                foreach (var objectName in command.objects)
+                {
+                    var obj = GameObject.Find(objectName);
+                    if (obj == null)
+                    {
+                        errors.Add($"Object '{objectName}' not found");
+                        continue;
+                    }
+                    
+                    var animator = obj.GetComponent<Animator>();
+                    if (animator == null)
+                    {
+                        errors.Add($"'{objectName}' has no Animator component");
+                        continue;
+                    }
+                    
+                    var controller = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+                    if (controller == null)
+                    {
+                        // Try to get the source controller if it's an AnimatorOverrideController
+                        var overrideController = animator.runtimeAnimatorController as AnimatorOverrideController;
+                        if (overrideController != null)
+                        {
+                            controller = overrideController.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+                        }
+                        
+                        if (controller == null)
+                        {
+                            errors.Add($"'{objectName}' AnimatorController is not editable (may need to be a project asset)");
+                            continue;
+                        }
+                    }
+                    
+                    // Check if parameter already exists
+                    bool exists = false;
+                    foreach (var p in controller.parameters)
+                    {
+                        if (p.name == command.parameterName)
+                        {
+                            exists = true;
+                            errors.Add($"'{objectName}' already has parameter '{command.parameterName}'");
+                            break;
+                        }
+                    }
+                    
+                    if (exists) continue;
+                    
+                    // Parse parameter type
+                    AnimatorControllerParameterType paramType = AnimatorControllerParameterType.Float;
+                    switch (command.parameterType?.ToLower())
+                    {
+                        case "float":
+                            paramType = AnimatorControllerParameterType.Float;
+                            break;
+                        case "int":
+                        case "integer":
+                            paramType = AnimatorControllerParameterType.Int;
+                            break;
+                        case "bool":
+                        case "boolean":
+                            paramType = AnimatorControllerParameterType.Bool;
+                            break;
+                        case "trigger":
+                            paramType = AnimatorControllerParameterType.Trigger;
+                            break;
+                        default:
+                            paramType = AnimatorControllerParameterType.Float;
+                            break;
+                    }
+                    
+                    Undo.RecordObject(controller, "Add Animator Parameter");
+                    controller.AddParameter(command.parameterName, paramType);
+                    
+                    // Set default value if provided
+                    if (command.floatValue != 0 || command.intValue != 0 || command.boolValue)
+                    {
+                        switch (paramType)
+                        {
+                            case AnimatorControllerParameterType.Float:
+                                animator.SetFloat(command.parameterName, command.floatValue);
+                                break;
+                            case AnimatorControllerParameterType.Int:
+                                animator.SetInteger(command.parameterName, command.intValue);
+                                break;
+                            case AnimatorControllerParameterType.Bool:
+                                animator.SetBool(command.parameterName, command.boolValue);
+                                break;
+                        }
+                    }
+                    
+                    EditorUtility.SetDirty(controller);
+                    modifiedObjects.Add(objectName);
+                }
+                
+                var data = new ResponseData
+                {
+                    affected_objects = modifiedObjects.ToArray(),
+                    count = modifiedObjects.Count,
+                    errors = errors.ToArray()
+                };
+                
+                if (modifiedObjects.Count == 0)
+                {
+                    return UnityResponse.Error("No parameters added", errors.ToArray());
+                }
+                
+                return UnityResponse.Success($"Added parameter '{command.parameterName}' to {modifiedObjects.Count} controllers", data);
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Add animator parameter failed: {e.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Remove parameter from AnimatorController (DELETE)
+        /// POST /unity/animator/parameter/remove
+        /// </summary>
+        public static UnityResponse RemoveAnimatorParameter(string json)
+        {
+            try
+            {
+                var command = JsonUtility.FromJson<AnimatorParameterCommand>(json);
+                
+                if (command.objects == null || command.objects.Length == 0)
+                {
+                    return UnityResponse.Error("No objects specified");
+                }
+                
+                if (string.IsNullOrEmpty(command.parameterName))
+                {
+                    return UnityResponse.Error("Parameter name not specified");
+                }
+                
+                var modifiedObjects = new List<string>();
+                var errors = new List<string>();
+                
+                foreach (var objectName in command.objects)
+                {
+                    var obj = GameObject.Find(objectName);
+                    if (obj == null)
+                    {
+                        errors.Add($"Object '{objectName}' not found");
+                        continue;
+                    }
+                    
+                    var animator = obj.GetComponent<Animator>();
+                    if (animator == null)
+                    {
+                        errors.Add($"'{objectName}' has no Animator component");
+                        continue;
+                    }
+                    
+                    var controller = animator.runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+                    if (controller == null)
+                    {
+                        errors.Add($"'{objectName}' AnimatorController is not editable");
+                        continue;
+                    }
+                    
+                    // Find parameter index
+                    int paramIndex = -1;
+                    for (int i = 0; i < controller.parameters.Length; i++)
+                    {
+                        if (controller.parameters[i].name == command.parameterName)
+                        {
+                            paramIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (paramIndex < 0)
+                    {
+                        errors.Add($"'{objectName}' has no parameter '{command.parameterName}'");
+                        continue;
+                    }
+                    
+                    Undo.RecordObject(controller, "Remove Animator Parameter");
+                    controller.RemoveParameter(paramIndex);
+                    EditorUtility.SetDirty(controller);
+                    modifiedObjects.Add(objectName);
+                }
+                
+                var data = new ResponseData
+                {
+                    affected_objects = modifiedObjects.ToArray(),
+                    count = modifiedObjects.Count,
+                    errors = errors.ToArray()
+                };
+                
+                return UnityResponse.Success($"Removed parameter '{command.parameterName}' from {modifiedObjects.Count} controllers", data);
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Remove animator parameter failed: {e.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Crossfade to animation state with smooth transition
+        /// POST /unity/animator/crossfade
+        /// </summary>
+        public static UnityResponse CrossfadeAnimation(string json)
+        {
+            try
+            {
+                var command = JsonUtility.FromJson<AnimatorCrossfadeCommand>(json);
+                
+                if (command.objects == null || command.objects.Length == 0)
+                {
+                    return UnityResponse.Error("No objects specified");
+                }
+                
+                if (string.IsNullOrEmpty(command.stateName))
+                {
+                    return UnityResponse.Error("State name not specified");
+                }
+                
+                var modifiedObjects = new List<string>();
+                var errors = new List<string>();
+                
+                foreach (var objectName in command.objects)
+                {
+                    var obj = GameObject.Find(objectName);
+                    if (obj == null)
+                    {
+                        errors.Add($"Object '{objectName}' not found");
+                        continue;
+                    }
+                    
+                    var animator = obj.GetComponent<Animator>();
+                    if (animator == null)
+                    {
+                        errors.Add($"'{objectName}' has no Animator component");
+                        continue;
+                    }
+                    
+                    float duration = command.transitionDuration > 0 ? command.transitionDuration : 0.25f;
+                    animator.CrossFade(command.stateName, duration, command.layer, command.normalizedTime);
+                    modifiedObjects.Add(objectName);
+                }
+                
+                var data = new ResponseData
+                {
+                    affected_objects = modifiedObjects.ToArray(),
+                    count = modifiedObjects.Count,
+                    errors = errors.ToArray()
+                };
+                
+                return UnityResponse.Success($"Crossfade to '{command.stateName}' on {modifiedObjects.Count} objects", data);
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Crossfade animation failed: {e.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Reset animator trigger
+        /// POST /unity/animator/trigger/reset
+        /// </summary>
+        public static UnityResponse ResetAnimatorTrigger(string json)
+        {
+            try
+            {
+                var command = JsonUtility.FromJson<AnimatorTriggerCommand>(json);
+                
+                if (command.objects == null || command.objects.Length == 0)
+                {
+                    return UnityResponse.Error("No objects specified");
+                }
+                
+                if (string.IsNullOrEmpty(command.triggerName))
+                {
+                    return UnityResponse.Error("Trigger name not specified");
+                }
+                
+                var modifiedObjects = new List<string>();
+                var errors = new List<string>();
+                
+                foreach (var objectName in command.objects)
+                {
+                    var obj = GameObject.Find(objectName);
+                    if (obj == null)
+                    {
+                        errors.Add($"Object '{objectName}' not found");
+                        continue;
+                    }
+                    
+                    var animator = obj.GetComponent<Animator>();
+                    if (animator == null)
+                    {
+                        errors.Add($"'{objectName}' has no Animator component");
+                        continue;
+                    }
+                    
+                    animator.ResetTrigger(command.triggerName);
+                    modifiedObjects.Add(objectName);
+                }
+                
+                var data = new ResponseData
+                {
+                    affected_objects = modifiedObjects.ToArray(),
+                    count = modifiedObjects.Count,
+                    errors = errors.ToArray()
+                };
+                
+                return UnityResponse.Success($"Reset trigger '{command.triggerName}' on {modifiedObjects.Count} objects", data);
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Reset animator trigger failed: {e.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Set animator speed
+        /// POST /unity/animator/speed
+        /// </summary>
+        public static UnityResponse SetAnimatorSpeed(string json)
+        {
+            try
+            {
+                var command = JsonUtility.FromJson<AnimatorSpeedCommand>(json);
+                
+                if (command.objects == null || command.objects.Length == 0)
+                {
+                    return UnityResponse.Error("No objects specified");
+                }
+                
+                var modifiedObjects = new List<string>();
+                var errors = new List<string>();
+                
+                foreach (var objectName in command.objects)
+                {
+                    var obj = GameObject.Find(objectName);
+                    if (obj == null)
+                    {
+                        errors.Add($"Object '{objectName}' not found");
+                        continue;
+                    }
+                    
+                    var animator = obj.GetComponent<Animator>();
+                    if (animator == null)
+                    {
+                        errors.Add($"'{objectName}' has no Animator component");
+                        continue;
+                    }
+                    
+                    Undo.RecordObject(animator, "Set Animator Speed");
+                    animator.speed = command.speed;
+                    modifiedObjects.Add(objectName);
+                }
+                
+                var data = new ResponseData
+                {
+                    affected_objects = modifiedObjects.ToArray(),
+                    count = modifiedObjects.Count,
+                    errors = errors.ToArray()
+                };
+                
+                return UnityResponse.Success($"Set animator speed to {command.speed} on {modifiedObjects.Count} objects", data);
+            }
+            catch (Exception e)
+            {
+                return UnityResponse.Error($"Set animator speed failed: {e.Message}");
+            }
+        }
     }
     
     #region Animation Command Models
@@ -320,6 +779,51 @@ namespace AntigravityBridge.Editor
         public string[] objects;
         public string parameterName;
         public string parameterType;  // "float", "int", "bool", "trigger"
+        public float floatValue;
+        public int intValue;
+        public bool boolValue;
+    }
+    
+    [Serializable]
+    public class AnimatorParameterCommand
+    {
+        public string[] objects;
+        public string parameterName;
+        public string parameterType;  // "float", "int", "bool", "trigger"
+        public float floatValue;      // Default value for float
+        public int intValue;          // Default value for int
+        public bool boolValue;        // Default value for bool
+    }
+    
+    [Serializable]
+    public class AnimatorCrossfadeCommand
+    {
+        public string[] objects;
+        public string stateName;
+        public float transitionDuration = 0.25f;
+        public int layer = 0;
+        public float normalizedTime = 0f;
+    }
+    
+    [Serializable]
+    public class AnimatorTriggerCommand
+    {
+        public string[] objects;
+        public string triggerName;
+    }
+    
+    [Serializable]
+    public class AnimatorSpeedCommand
+    {
+        public string[] objects;
+        public float speed = 1f;
+    }
+    
+    [Serializable]
+    public class AnimatorParameterInfo
+    {
+        public string name;
+        public string type;      // "Float", "Int", "Bool", "Trigger"
         public float floatValue;
         public int intValue;
         public bool boolValue;

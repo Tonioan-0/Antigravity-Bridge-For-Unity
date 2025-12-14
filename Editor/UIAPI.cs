@@ -154,9 +154,9 @@ namespace AntigravityBridge.Editor
 
                     Undo.RecordObject(rect, "Modify RectTransform");
 
-                    if (command.anchorMin != null) rect.anchorMin = command.anchorMin.ToVector2();
-                    if (command.anchorMax != null) rect.anchorMax = command.anchorMax.ToVector2();
-                    if (command.pivot != null) rect.pivot = command.pivot.ToVector2();
+                    if (command.anchorMin != null) { var v = command.anchorMin.ToVector3(); rect.anchorMin = new Vector2(v.x, v.y); }
+                    if (command.anchorMax != null) { var v = command.anchorMax.ToVector3(); rect.anchorMax = new Vector2(v.x, v.y); }
+                    if (command.pivot != null) { var v = command.pivot.ToVector3(); rect.pivot = new Vector2(v.x, v.y); }
                     if (command.anchoredPosition != null) rect.anchoredPosition = command.anchoredPosition.ToVector3();
                     if (command.sizeDelta != null) rect.sizeDelta = command.sizeDelta.ToVector3();
 
@@ -187,7 +187,7 @@ namespace AntigravityBridge.Editor
 
         private static GameObject GetOrCreateCanvas()
         {
-            var canvas = UnityEngine.Object.FindObjectOfType<Canvas>();
+            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
             if (canvas != null) return canvas.gameObject;
             return CreateCanvas("Canvas");
         }
@@ -207,7 +207,7 @@ namespace AntigravityBridge.Editor
 
         private static void CreateEventSystem()
         {
-            if (UnityEngine.Object.FindObjectOfType<EventSystem>() == null)
+            if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() == null)
             {
                 GameObject go = new GameObject("EventSystem");
                 go.AddComponent<EventSystem>();

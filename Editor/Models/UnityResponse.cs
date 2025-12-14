@@ -76,6 +76,9 @@ namespace AntigravityBridge.Editor.Models
         public ConsoleLogsData console_logs;
         public CompilationData compilation;
         public WaitCompilationResult wait_result;
+        
+        // Animation API fields
+        public AnimatorParameterInfo[] animator_parameters;
     }
 
     /// <summary>

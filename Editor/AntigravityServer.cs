@@ -367,6 +367,18 @@ namespace AntigravityBridge.Editor
                 return TagAPI.GetAllTags();
             }
 
+            // Animator info GET endpoints
+            if (path.StartsWith("/unity/animator/info/") && method == "GET")
+            {
+                string objectName = Uri.UnescapeDataString(path.Substring("/unity/animator/info/".Length));
+                return AnimationAPI.GetAnimatorInfo(objectName);
+            }
+            if (path.StartsWith("/unity/animator/parameters/") && method == "GET")
+            {
+                string objectName = Uri.UnescapeDataString(path.Substring("/unity/animator/parameters/".Length));
+                return AnimationAPI.GetAnimatorParameters(objectName);
+            }
+
             // Command execution endpoints (POST)
             if (method == "POST")
             {
@@ -499,6 +511,26 @@ namespace AntigravityBridge.Editor
                 if (path == "/unity/animator/set")
                 {
                     return AnimationAPI.SetAnimatorParameter(body);
+                }
+                if (path == "/unity/animator/parameter/add")
+                {
+                    return AnimationAPI.AddAnimatorParameter(body);
+                }
+                if (path == "/unity/animator/parameter/remove")
+                {
+                    return AnimationAPI.RemoveAnimatorParameter(body);
+                }
+                if (path == "/unity/animator/crossfade")
+                {
+                    return AnimationAPI.CrossfadeAnimation(body);
+                }
+                if (path == "/unity/animator/trigger/reset")
+                {
+                    return AnimationAPI.ResetAnimatorTrigger(body);
+                }
+                if (path == "/unity/animator/speed")
+                {
+                    return AnimationAPI.SetAnimatorSpeed(body);
                 }
 
                 // Particle endpoints

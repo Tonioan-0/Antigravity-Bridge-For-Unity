@@ -254,7 +254,7 @@ namespace AntigravityBridge.Editor
                 // Search entire scene
                 searchSpace = _includeInactive 
                     ? Resources.FindObjectsOfTypeAll<GameObject>()
-                    : GameObject.FindObjectsOfType<GameObject>();
+                    : GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             }
 
             // Apply filters

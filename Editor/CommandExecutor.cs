@@ -545,7 +545,7 @@ namespace AntigravityBridge.Editor
             else
             {
                 // Search entire scene
-                searchRoot = UnityEngine.Object.FindObjectsOfType<GameObject>(true);
+                searchRoot = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             }
 
             // Apply filter

@@ -517,9 +517,41 @@ Stop animation on objects.
 }
 ```
 
+### GET /unity/animator/info/{objectName}
+
+Get Animator current state info.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Animator on 'Player': clip='Run', speed=1",
+  "data": { "count": 1 }
+}
+```
+
+### GET /unity/animator/parameters/{objectName}
+
+List all Animator parameters with current values.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "animator_parameters": [
+      { "name": "Speed", "type": "Float", "floatValue": 5.0 },
+      { "name": "IsRunning", "type": "Bool", "boolValue": true },
+      { "name": "Jump", "type": "Trigger" }
+    ],
+    "count": 3
+  }
+}
+```
+
 ### POST /unity/animator/set
 
-Set Animator parameter.
+Set Animator parameter value (UPDATE).
 
 **Request Body:**
 ```json
@@ -527,13 +559,75 @@ Set Animator parameter.
   "objects": ["Character"],
   "parameterName": "Speed",
   "parameterType": "float",
-  "floatValue": 5.0,
-  "intValue": 0,
-  "boolValue": false
+  "floatValue": 5.0
 }
 ```
 
 **Parameter Types:** `"float"`, `"int"`, `"bool"`, `"trigger"`
+
+### POST /unity/animator/parameter/add
+
+Add parameter to AnimatorController (CREATE).
+
+**Request Body:**
+```json
+{
+  "objects": ["Character"],
+  "parameterName": "IsJumping",
+  "parameterType": "bool",
+  "boolValue": false
+}
+```
+
+### POST /unity/animator/parameter/remove
+
+Remove parameter from AnimatorController (DELETE).
+
+**Request Body:**
+```json
+{
+  "objects": ["Character"],
+  "parameterName": "ObsoleteParam"
+}
+```
+
+### POST /unity/animator/crossfade
+
+Crossfade to animation state with smooth transition.
+
+**Request Body:**
+```json
+{
+  "objects": ["Character"],
+  "stateName": "Run",
+  "transitionDuration": 0.25,
+  "layer": 0
+}
+```
+
+### POST /unity/animator/speed
+
+Set Animator playback speed.
+
+**Request Body:**
+```json
+{
+  "objects": ["Character"],
+  "speed": 1.5
+}
+```
+
+### POST /unity/animator/trigger/reset
+
+Reset a trigger parameter.
+
+**Request Body:**
+```json
+{
+  "objects": ["Character"],
+  "triggerName": "Jump"
+}
+```
 
 ---
 
